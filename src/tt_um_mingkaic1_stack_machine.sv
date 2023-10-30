@@ -28,4 +28,6 @@ module tt_um_mingkaic1_stack_machine (
     // Configure bidirectional pins
     assign uio_oe = 8'b0000_0000;  // All inputs
 
+    assign uio_out = 8'b0;
+
 endmodule: tt_um_mingkaic1_stack_machine
