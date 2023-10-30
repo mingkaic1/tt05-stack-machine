@@ -15,12 +15,12 @@ module tt_um_mingkaic1_stack_machine (
         .clock(clk),
         .re_sel_a(uio_in[2:0]), 
         .re_sel_b(3'd7),
-        .re_data_a(ui_in), 
-        .re_data_b(),
+        .re_data_a(uo_out), 
+        // .re_data_b(),
         .wr_sel_a(uio_in[5:3]), 
         .wr_sel_b(3'd6),
-        .wr_data_a(uo_out),
-        .wr_data_b(),
+        .wr_data_a(ui_in),
+        // .wr_data_b(),
         .wr_en_a(uio_in[6]), 
         .wr_en_b(uio_in[7])
     );
