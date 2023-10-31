@@ -1,21 +1,5 @@
 `default_nettype none
 
-typedef enum logic [3:0] {
-    // Arithmetic
-    ADD,
-    SUB,
-    // Shift
-    SHL,
-    SHR,
-    SRA,
-    // Logical
-    AND,
-    LOR,
-    XOR,
-    // Null
-    NUL
-} alu_op_e;
-
 module Top (
     input logic clock, reset,
     input logic [7:0] data_in,
@@ -128,6 +112,9 @@ module Top (
 
             EX_JPZ_0: next_state = EX_JPZ_1;
             EX_JPZ_1: next_state = FETCH;
+
+            EX_JPN_0: next_state = EX_JPN_1;
+            EX_JPN_1: next_state = FETCH;
         endcase
     end
 
@@ -241,8 +228,14 @@ module Top (
                         OP_PSI: pc <= pc + 8'd1;
                         OP_PSH: pc <= pc + 8'd1;
                         OP_STR: pc <= pc + 8'd1;
-                        OP_JPZ: pc <= pc + 8'd1;
-                        OP_JPN: pc <= pc + 8'd1;
+                        OP_JPZ: begin
+                            if (stack_out_b == 8'd0) pc <= pc + 8'd1;
+                            else pc <= pc + 8'd2;  // Skip imm
+                        end
+                        OP_JPN: begin
+                            if (stack_out_b[7] == 1'b1) pc <= pc + 8'd1;
+                            else pc <= pc + 8'd2;  // Skip imm
+                        end
                         OP_RET: pc <= pc + 8'd1;
                     endcase
                 end
