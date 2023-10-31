@@ -10,7 +10,7 @@ project:
     - Top.sv
     - RegFile.sv
     - Stack.sv
-    - StackMachine_pkg.sv
+    - StackMachine_pkg.pkg
     - ALU.sv
   top_module:  "tt_um_mingkaic1_stack_machine"      # Put the name of your top module here, must start with "tt_um_". Make it unique by including your github username
 
