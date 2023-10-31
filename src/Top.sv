@@ -78,7 +78,7 @@ module Top (
     always_comb begin
         next_state = state;
         case (state)
-            FETCH: next_state = DECODE
+            FETCH: next_state = DECODE;
             DECODE: begin
                 case (ir[3:0]) inside
                     OP_ADD, 
@@ -95,8 +95,8 @@ module Top (
                     OP_PSI: next_state = EX_PSI_0;
                     OP_PSH: next_state = EX_PSH_0;
                     OP_STR: next_state = EX_STR_0;
-                    OP_JPZ: next_state = (stack_out_b == 8'd0) ? OP_JPZ_0 : FETCH;
-                    OP_JPN: next_state = (stack_out_b[7] == 1'b1) ? OP_JPN_0 : FETCH;
+                    OP_JPZ: next_state = (stack_out_b == 8'd0) ? EX_JPZ_0 : FETCH;
+                    OP_JPN: next_state = (stack_out_b[7] == 1'b1) ? EX_JPN_0 : FETCH;
                     OP_RET: next_state = EX_RET;
                 endcase
             end
@@ -111,8 +111,8 @@ module Top (
             EX_STR_0: next_state = EX_STR_1;
             EX_STR_1: next_state = FETCH;
 
-            OP_JPZ_0: next_state = OP_JPZ_1;
-            OP_JPZ_1: next_state = FETCH;
+            EX_JPZ_0: next_state = EX_JPZ_1;
+            EX_JPZ_1: next_state = FETCH;
         endcase
     end
 
