@@ -96,18 +96,17 @@ module Top (
         case (state)
             FETCH: next_state = DECODE;
             DECODE: begin
-                case (ir[3:0]) inside
-                    OP_ADD, 
-                    OP_SUB, 
-                    OP_SHL, 
-                    OP_SHR, 
-                    OP_SRA, 
-                    OP_AND, 
-                    OP_LOR, 
-                    OP_XOR, 
-                    OP_DUP, 
+                case (ir[3:0])
+                    OP_ADD: next_state = FETCH;
+                    OP_SUB: next_state = FETCH;
+                    OP_SHL: next_state = FETCH;
+                    OP_SHR: next_state = FETCH;
+                    OP_SRA: next_state = FETCH;
+                    OP_AND: next_state = FETCH;
+                    OP_LOR: next_state = FETCH;
+                    OP_XOR: next_state = FETCH;
+                    OP_DUP: next_state = FETCH;
                     OP_NUL: next_state = FETCH;
-
                     OP_PSI: next_state = EX_PSI_0;
                     OP_PSH: next_state = EX_PSH_0;
                     OP_STR: next_state = EX_STR_0;
@@ -148,37 +147,39 @@ module Top (
                 mem_addr = pc;
             end
             DECODE: begin
-                case (ir[3:0]) inside
-                    OP_ADD, 
-                    OP_SUB,
-                    OP_SHL, 
-                    OP_SHR, 
-                    OP_SRA, 
-                    OP_AND, 
-                    OP_LOR, 
-                    OP_XOR: begin
-                        // 2 values -> 1 value
-                        re_en_a = 1'b1;
-                        re_en_b = 1'b1;
-                        wr_en = 1'b1;
-                        stack_in = alu_out;
-                        case (ir[3:0])
-                            OP_ADD: alu_op = ADD;
-                            OP_SUB: alu_op = SUB;
-                            OP_SHL: alu_op = SHL;
-                            OP_SHR: alu_op = SHR;
-                            OP_SRA: alu_op = SRA;
-                            OP_AND: alu_op = AND;
-                            OP_LOR: alu_op = LOR;
-                            OP_XOR: alu_op = XOR;
-                        endcase
-                    end
-                    OP_DUP: begin
-                        wr_en = 1'b1;
-                        stack_in = stack_out_b;
-                    end
-                    OP_RET: data_out = stack_out_b;
-                endcase
+                if (
+                    ir[3:0] == OP_ADD ||
+                    ir[3:0] == OP_SUB ||
+                    ir[3:0] == OP_SHL ||
+                    ir[3:0] == OP_SHR ||
+                    ir[3:0] == OP_SRA ||
+                    ir[3:0] == OP_AND ||
+                    ir[3:0] == OP_LOR ||
+                    ir[3:0] == OP_XOR ||
+                ) begin
+                    // 2 values -> 1 value
+                    re_en_a = 1'b1;
+                    re_en_b = 1'b1;
+                    wr_en = 1'b1;
+                    stack_in = alu_out;
+                    case (ir[3:0])
+                        OP_ADD: alu_op = ADD;
+                        OP_SUB: alu_op = SUB;
+                        OP_SHL: alu_op = SHL;
+                        OP_SHR: alu_op = SHR;
+                        OP_SRA: alu_op = SRA;
+                        OP_AND: alu_op = AND;
+                        OP_LOR: alu_op = LOR;
+                        OP_XOR: alu_op = XOR;
+                    endcase
+                end
+                else if (ir[3:0] == OP_DUP) begin
+                    wr_en = 1'b1;
+                    stack_in = stack_out_b;
+                end
+                else if (ir[3:0] == OP_RET) begin
+                    data_out = stack_out_b;
+                end
             end
             
             EX_PSI_0: mem_addr = pc;
@@ -226,22 +227,22 @@ module Top (
                     ir <= data_in;
                 end
                 DECODE: begin
-                    case (ir[3:0]) inside
-                        OP_ADD, 
-                        OP_SUB, 
-                        OP_SHL, 
-                        OP_SHR, 
-                        OP_SRA, 
-                        OP_AND, 
-                        OP_LOR, 
-                        OP_XOR, 
-                        OP_DUP, 
-                        OP_NUL,
-                        OP_PSI,
-                        OP_PSH,
-                        OP_STR,
-                        OP_JPZ,
-                        OP_JPN,
+                    case (ir[3:0])
+                        OP_ADD: pc <= pc + 8'd1; 
+                        OP_SUB: pc <= pc + 8'd1; 
+                        OP_SHL: pc <= pc + 8'd1; 
+                        OP_SHR: pc <= pc + 8'd1; 
+                        OP_SRA: pc <= pc + 8'd1; 
+                        OP_AND: pc <= pc + 8'd1; 
+                        OP_LOR: pc <= pc + 8'd1; 
+                        OP_XOR: pc <= pc + 8'd1; 
+                        OP_DUP: pc <= pc + 8'd1; 
+                        OP_NUL: pc <= pc + 8'd1;
+                        OP_PSI: pc <= pc + 8'd1;
+                        OP_PSH: pc <= pc + 8'd1;
+                        OP_STR: pc <= pc + 8'd1;
+                        OP_JPZ: pc <= pc + 8'd1;
+                        OP_JPN: pc <= pc + 8'd1;
                         OP_RET: pc <= pc + 8'd1;
                     endcase
                 end
