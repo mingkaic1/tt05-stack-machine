@@ -11,23 +11,14 @@ module tt_um_mingkaic1_stack_machine (
     input  logic       rst_n     // reset_n - low to reset
 );
 
-    RegFile reg_file (
+    Top top (
         .clock(clk),
-        .re_sel_a(uio_in[2:0]), 
-        .re_sel_b(3'd7),
-        .re_data_a(uo_out), 
-        // .re_data_b(),
-        .wr_sel_a(uio_in[5:3]), 
-        .wr_sel_b(3'd6),
-        .wr_data_a(ui_in),
-        // .wr_data_b(),
-        .wr_en_a(uio_in[6]), 
-        .wr_en_b(uio_in[7])
+        .reset(~rst_n),
+        .data_in(ui_in),
+        .data_out(uo_out),
+        .mem_addr(uio_out)
     );
 
-    // Configure bidirectional pins
-    assign uio_oe = 8'b0000_0000;  // All inputs
-
-    assign uio_out = 8'b0;
+    assign uio_oe = 8'b1111_1111;  // All outputs
 
 endmodule: tt_um_mingkaic1_stack_machine
