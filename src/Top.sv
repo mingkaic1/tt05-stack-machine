@@ -8,27 +8,31 @@ module Top (
 
     // Opcode definition
     // Arithmetic
-    localparam [3:0] OP_ADD = 4'd0;
-    localparam [3:0] OP_SUB = 4'd1;
+    localparam [7:0] OP_ADD = 8'd0;
+    localparam [7:0] OP_SUB = 8'd1;
     // Shifting
-    localparam [3:0] OP_SHL = 4'd2;
-    localparam [3:0] OP_SHR = 4'd3;
-    localparam [3:0] OP_SRA = 4'd4;
+    localparam [7:0] OP_SHL = 8'd2;
+    localparam [7:0] OP_SHR = 8'd3;
+    localparam [7:0] OP_SRA = 8'd4;
     // Logical
-    localparam [3:0] OP_AND = 4'd5;
-    localparam [3:0] OP_LOR = 4'd6;
-    localparam [3:0] OP_XOR = 4'd7;
+    localparam [7:0] OP_AND = 8'd5;
+    localparam [7:0] OP_LOR = 8'd6;
+    localparam [7:0] OP_XOR = 8'd7;
     // Stack operations
-    localparam [3:0] OP_PSI = 4'd8;  // Push immediate
-    localparam [3:0] OP_PSH = 4'd9;  // Push memory
-    localparam [3:0] OP_STR = 4'd10;  // Store
-    localparam [3:0] OP_DUP = 4'd11;  // Duplicate
+    localparam [7:0] OP_PSI = 8'd8;  // Push immediate
+    localparam [7:0] OP_PSH = 8'd9;  // Push memory
+    localparam [7:0] OP_STR = 8'd10;  // Store
+    localparam [7:0] OP_DUP = 8'd11;  // Duplicate
     // Control flow
-    localparam [3:0] OP_JPZ = 4'd12;  // Jump if zero
-    localparam [3:0] OP_JPN = 4'd13;  // Jump if negative
-    localparam [3:0] OP_RET = 4'd14;
+    localparam [7:0] OP_JPZ = 8'd12;  // Jump if zero
+    localparam [7:0] OP_JPN = 8'd13;  // Jump if negative
+    localparam [7:0] OP_FIN = 8'd14;
     // Null
-    localparam [3:0] OP_NUL = 4'd15;
+    localparam [7:0] OP_NUL = 8'd15;
+    // NEW
+    localparam [7:0] OP_CAL = 8'd16;  // Call
+    localparam [7:0] OP_RET = 8'd17;  // Return
+    localparam [7:0] OP_CAR = 8'd18;  // Call and return (tail recurse)
 
     // Registers
     logic [7:0] pc, ir;
@@ -39,6 +43,10 @@ module Top (
     alu_op_e alu_op;
     logic [7:0] alu_out;
 
+    // Return stack
+    logic [7:0] return_stack_in, return_stack_out;
+    logic return_stack_wr_en, return_stack_re_en;
+
     Stack stack (
         .clock(clock),
         .reset(reset),
@@ -48,6 +56,17 @@ module Top (
         .wr_en(wr_en), 
         .re_en_a(re_en_a), 
         .re_en_b(re_en_b)
+    );
+
+    Stack return_stack (
+        .clock(clock),
+        .reset(reset),
+        .wr_data(return_stack_in),
+        // .re_data_a(),  
+        .re_data_b(return_stack_out),
+        .wr_en(return_stack_wr_en), 
+        .re_en_a(1'b0), 
+        .re_en_b(return_stack_re_en)
     );
 
     ALU alu (
@@ -61,7 +80,7 @@ module Top (
     // FSM                                //
     ////////////////////////////////////////
 
-    typedef enum logic [3:0] {
+    typedef enum logic [4:0] {
         FETCH,
         DECODE,
         EX_PSI_0, EX_PSI_1,
@@ -69,7 +88,9 @@ module Top (
         EX_STR_0, EX_STR_1,
         EX_JPZ_0, EX_JPZ_1,
         EX_JPN_0, EX_JPN_1,
-        EX_RET
+        EX_FIN,
+        EX_CAL_0, EX_CAL_1,
+        EX_CAR_0, EX_CAR_1
     } state_e;
 
     state_e state, next_state;
@@ -80,7 +101,7 @@ module Top (
         case (state)
             FETCH: next_state = DECODE;
             DECODE: begin
-                case (ir[3:0])
+                case (ir)
                     OP_ADD: next_state = FETCH;
                     OP_SUB: next_state = FETCH;
                     OP_SHL: next_state = FETCH;
@@ -96,7 +117,10 @@ module Top (
                     OP_STR: next_state = EX_STR_0;
                     OP_JPZ: next_state = (stack_out_b == 8'd0) ? EX_JPZ_0 : FETCH;
                     OP_JPN: next_state = (stack_out_b[7] == 1'b1) ? EX_JPN_0 : FETCH;
-                    OP_RET: next_state = EX_RET;
+                    OP_FIN: next_state = EX_FIN;
+                    OP_CAL: next_state = EX_CAL_0;
+                    OP_CAR: next_state = EX_CAR_0;
+                    OP_RET: next_state = FETCH;
                 endcase
             end
 
@@ -115,6 +139,12 @@ module Top (
 
             EX_JPN_0: next_state = EX_JPN_1;
             EX_JPN_1: next_state = FETCH;
+
+            EX_CAL_0: next_state = EX_CAL_1;
+            EX_CAL_1: next_state = FETCH;
+
+            EX_CAR_0: next_state = EX_CAR_1;
+            EX_CAR_1: next_state = FETCH;
         endcase
     end
 
@@ -128,6 +158,9 @@ module Top (
         re_en_a = 1'b0;
         re_en_b = 1'b0;
         alu_op = NUL;
+        return_stack_in = 8'b0;
+        return_stack_re_en = 1'b0;
+        return_stack_wr_en = 1'b0;
 
         case (state)
             FETCH: begin
@@ -135,21 +168,21 @@ module Top (
             end
             DECODE: begin
                 if (
-                    ir[3:0] == OP_ADD ||
-                    ir[3:0] == OP_SUB ||
-                    ir[3:0] == OP_SHL ||
-                    ir[3:0] == OP_SHR ||
-                    ir[3:0] == OP_SRA ||
-                    ir[3:0] == OP_AND ||
-                    ir[3:0] == OP_LOR ||
-                    ir[3:0] == OP_XOR
+                    ir == OP_ADD ||
+                    ir == OP_SUB ||
+                    ir == OP_SHL ||
+                    ir == OP_SHR ||
+                    ir == OP_SRA ||
+                    ir == OP_AND ||
+                    ir == OP_LOR ||
+                    ir == OP_XOR
                 ) begin
                     // 2 values -> 1 value
                     re_en_a = 1'b1;
                     re_en_b = 1'b1;
                     wr_en = 1'b1;
                     stack_in = alu_out;
-                    case (ir[3:0])
+                    case (ir)
                         OP_ADD: alu_op = ADD;
                         OP_SUB: alu_op = SUB;
                         OP_SHL: alu_op = SHL;
@@ -160,12 +193,15 @@ module Top (
                         OP_XOR: alu_op = XOR;
                     endcase
                 end
-                else if (ir[3:0] == OP_DUP) begin
+                else if (ir == OP_DUP) begin
                     wr_en = 1'b1;
                     stack_in = stack_out_b;
                 end
-                else if (ir[3:0] == OP_RET) begin
+                else if (ir == OP_FIN) begin
                     data_out = stack_out_b;
+                end
+                else if (ir == OP_RET) begin
+                    return_stack_re_en = 1'b1;
                 end
             end
             
@@ -198,7 +234,16 @@ module Top (
             EX_JPN_0: mem_addr = pc;
             // EX_JPN_1: begin end
 
-            EX_RET: data_out = stack_out_b;
+            EX_FIN: data_out = stack_out_b;
+
+            EX_CAL_0: mem_addr = pc;
+            EX_CAL_1: begin
+                return_stack_in = pc;
+                return_stack_wr_en = 1'b1;
+            end
+
+            EX_CAR_0: mem_addr = pc;
+            // EX_CAR_1: begin end
         endcase
     end
 
@@ -214,7 +259,7 @@ module Top (
                     ir <= data_in;
                 end
                 DECODE: begin
-                    case (ir[3:0])
+                    case (ir)
                         OP_ADD: pc <= pc + 8'd1; 
                         OP_SUB: pc <= pc + 8'd1; 
                         OP_SHL: pc <= pc + 8'd1; 
@@ -236,7 +281,10 @@ module Top (
                             if (stack_out_b[7] == 1'b1) pc <= pc + 8'd1;
                             else pc <= pc + 8'd2;  // Skip imm
                         end
-                        OP_RET: pc <= pc + 8'd1;
+                        OP_FIN: pc <= pc + 8'd1;
+                        OP_CAL: pc <= pc + 8'd1;
+                        OP_CAR: pc <= pc + 8'd1;
+                        OP_RET: pc <= return_stack_out;
                     endcase
                 end
                 
@@ -255,6 +303,15 @@ module Top (
 
                 EX_JPN_0: ir <= data_in;
                 EX_JPN_1: pc <= ir;
+
+                EX_CAL_0: begin
+                    ir <= data_in;
+                    pc <= pc + 8'd1;
+                end
+                EX_CAL_1: pc <= ir;
+
+                EX_CAR_0: ir <= data_in;
+                EX_CAR_1: pc <= ir;
             endcase
         end
     end

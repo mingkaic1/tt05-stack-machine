@@ -5,7 +5,7 @@ module Memory (
     output logic [7:0] data_out
 );
 
-    // Opcode definition
+// Opcode definition
     // Arithmetic
     localparam [7:0] OP_ADD = 8'd0;
     localparam [7:0] OP_SUB = 8'd1;
@@ -25,9 +25,13 @@ module Memory (
     // Control flow
     localparam [7:0] OP_JPZ = 8'd12;  // Jump if zero
     localparam [7:0] OP_JPN = 8'd13;  // Jump if negative
-    localparam [7:0] OP_RET = 8'd14;
+    localparam [7:0] OP_FIN = 8'd14;
     // Null
     localparam [7:0] OP_NUL = 8'd15;
+    // NEW
+    localparam [7:0] OP_CAL = 8'd16;  // Call
+    localparam [7:0] OP_RET = 8'd17;  // Return
+    localparam [7:0] OP_CAR = 8'd18;  // Call and return (tail recurse)
 
     localparam [7:0] mem [] = '{
         OP_PSI,
@@ -59,7 +63,7 @@ module Memory (
         OP_PSH,
         8'd18,  // 5, 12 on stack
         OP_ADD,  // 17 on stack
-        OP_RET
+        OP_FIN
     };
 
     assign data_out = mem[mem_addr];
