@@ -1,5 +1,7 @@
 `default_nettype none
 
+import StackMachine_pkg::*;
+
 module Top (
     input logic clock, reset,
     input logic [7:0] data_in,
