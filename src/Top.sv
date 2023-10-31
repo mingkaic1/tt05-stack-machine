@@ -1,5 +1,21 @@
 `default_nettype none
 
+typedef enum logic [3:0] {
+    // Arithmetic
+    ADD,
+    SUB,
+    // Shift
+    SHL,
+    SHR,
+    SRA,
+    // Logical
+    AND,
+    LOR,
+    XOR,
+    // Null
+    NUL
+} alu_op_e;
+
 module Top (
     input logic clock, reset,
     input logic [7:0] data_in,
