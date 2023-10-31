@@ -155,7 +155,7 @@ module Top (
                     ir[3:0] == OP_SRA ||
                     ir[3:0] == OP_AND ||
                     ir[3:0] == OP_LOR ||
-                    ir[3:0] == OP_XOR ||
+                    ir[3:0] == OP_XOR
                 ) begin
                     // 2 values -> 1 value
                     re_en_a = 1'b1;
