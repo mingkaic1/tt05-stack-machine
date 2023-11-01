@@ -264,7 +264,7 @@ module Top (
                     re_en_b = 1'b1;
                 end
                 else if (ir == OP_OVR) begin
-                    stack_in <= stack_out_a;
+                    stack_in = stack_out_a;
                     wr_en = 1'b1;
                 end
                 else if (ir == OP_SWP) begin
