@@ -4,11 +4,16 @@ typedef enum logic [3:0] {
     // Arithmetic
     ADD,
     SUB,
+    INC,
+    DEC,
+    MUL,
+    NEG,
     // Shift
     SHL,
     SHR,
     SRA,
     // Logical
+    NOT,
     AND,
     LOR,
     XOR,
@@ -26,30 +31,38 @@ module Top (
     // Arithmetic
     localparam [7:0] OP_ADD = 8'd0;
     localparam [7:0] OP_SUB = 8'd1;
+    localparam [7:0] OP_INC = 8'd2;
+    localparam [7:0] OP_DEC = 8'd3;
+    localparam [7:0] OP_NEG = 8'd4;
+    localparam [7:0] OP_MUL = 8'd5;
     // Shifting
-    localparam [7:0] OP_SHL = 8'd2;
-    localparam [7:0] OP_SHR = 8'd3;
-    localparam [7:0] OP_SRA = 8'd4;
+    localparam [7:0] OP_SHL = 8'd6;
+    localparam [7:0] OP_SHR = 8'd7;
+    localparam [7:0] OP_SRA = 8'd8;
     // Logical
-    localparam [7:0] OP_AND = 8'd5;
-    localparam [7:0] OP_LOR = 8'd6;
-    localparam [7:0] OP_XOR = 8'd7;
+    localparam [7:0] OP_NOT = 8'd9;
+    localparam [7:0] OP_AND = 8'd10;
+    localparam [7:0] OP_LOR = 8'd11;
+    localparam [7:0] OP_XOR = 8'd12;
     // Stack operations
-    localparam [7:0] OP_PSI = 8'd8;  // Push immediate
-    localparam [7:0] OP_PSH = 8'd9;  // Push memory
-    localparam [7:0] OP_STR = 8'd10;  // Store
-    localparam [7:0] OP_DUP = 8'd11;  // Duplicate
+    localparam [7:0] OP_PSI = 8'd13;  // Push immediate
+    localparam [7:0] OP_PSH = 8'd14;  // Push memory
+    localparam [7:0] OP_STR = 8'd15;  // Store
+    localparam [7:0] OP_DUP = 8'd16;  // Duplicate
+    localparam [7:0] OP_DRP = 8'd17;  // Drop top value
+    localparam [7:0] OP_SWP = 8'd18;  // Swap top two values
+    localparam [7:0] OP_OVR = 8'd19;  // Over (copy second value to top)
     // Control flow
-    localparam [7:0] OP_JPZ = 8'd12;  // Jump if zero
-    localparam [7:0] OP_JPN = 8'd13;  // Jump if negative
-    localparam [7:0] OP_FIN = 8'd14;
+    localparam [7:0] OP_JMP = 8'd20;  // Jump
+    localparam [7:0] OP_JPZ = 8'd21;  // Jump if zero
+    localparam [7:0] OP_JPN = 8'd22;  // Jump if negative
+    localparam [7:0] OP_CAL = 8'd23;  // Call
+    localparam [7:0] OP_RET = 8'd24;  // Return
+    localparam [7:0] OP_CAR = 8'd25;  // Call and return (tail recurse)
+    localparam [7:0] OP_FIN = 8'd26;
     // Null
-    localparam [7:0] OP_NUL = 8'd15;
-    // NEW
-    localparam [7:0] OP_CAL = 8'd16;  // Call
-    localparam [7:0] OP_RET = 8'd17;  // Return
-    localparam [7:0] OP_CAR = 8'd18;  // Call and return (tail recurse)
-
+    localparam [7:0] OP_NUL = 8'd27;
+    
     // Registers
     logic [7:0] pc, ir;
 
@@ -62,6 +75,8 @@ module Top (
     // Return stack
     logic [7:0] return_stack_in, return_stack_out;
     logic return_stack_wr_en, return_stack_re_en;
+
+    logic [7:0] temp_reg;
 
     Stack stack (
         .clock(clock),
@@ -102,11 +117,13 @@ module Top (
         EX_PSI_0, EX_PSI_1,
         EX_PSH_0, EX_PSH_1, EX_PSH_2,
         EX_STR_0, EX_STR_1,
+        EX_JMP_0, EX_JMP_1,
         EX_JPZ_0, EX_JPZ_1,
         EX_JPN_0, EX_JPN_1,
         EX_FIN,
         EX_CAL_0, EX_CAL_1,
-        EX_CAR_0, EX_CAR_1
+        EX_CAR_0, EX_CAR_1,
+        EX_SWP
     } state_e;
 
     state_e state, next_state;
@@ -120,17 +137,26 @@ module Top (
                 case (ir)
                     OP_ADD: next_state = FETCH;
                     OP_SUB: next_state = FETCH;
+                    OP_INC: next_state = FETCH;
+                    OP_DEC: next_state = FETCH;
+                    OP_MUL: next_state = FETCH;
+                    OP_NEG: next_state = FETCH;
                     OP_SHL: next_state = FETCH;
                     OP_SHR: next_state = FETCH;
                     OP_SRA: next_state = FETCH;
+                    OP_NOT: next_state = FETCH;
                     OP_AND: next_state = FETCH;
                     OP_LOR: next_state = FETCH;
                     OP_XOR: next_state = FETCH;
                     OP_DUP: next_state = FETCH;
+                    OP_DRP: next_state = FETCH;
+                    OP_OVR: next_state = FETCH;
+                    OP_SWP: next_state = EX_SWP;
                     OP_NUL: next_state = FETCH;
                     OP_PSI: next_state = EX_PSI_0;
                     OP_PSH: next_state = EX_PSH_0;
                     OP_STR: next_state = EX_STR_0;
+                    OP_JMP: next_state = EX_JMP_0;
                     OP_JPZ: next_state = (stack_out_b == 8'd0) ? EX_JPZ_0 : FETCH;
                     OP_JPN: next_state = (stack_out_b[7] == 1'b1) ? EX_JPN_0 : FETCH;
                     OP_FIN: next_state = EX_FIN;
@@ -149,6 +175,11 @@ module Top (
 
             EX_STR_0: next_state = EX_STR_1;
             EX_STR_1: next_state = FETCH;
+
+            EX_SWP: next_state = FETCH;
+
+            EX_JMP_0: next_state = EX_JMP_1;
+            EX_JMP_1: next_state = FETCH;
 
             EX_JPZ_0: next_state = EX_JPZ_1;
             EX_JPZ_1: next_state = FETCH;
@@ -186,9 +217,14 @@ module Top (
                 if (
                     ir == OP_ADD ||
                     ir == OP_SUB ||
+                    ir == OP_INC ||
+                    ir == OP_DEC ||
+                    ir == OP_MUL ||
+                    ir == OP_NEG ||
                     ir == OP_SHL ||
                     ir == OP_SHR ||
                     ir == OP_SRA ||
+                    ir == OP_NOT ||
                     ir == OP_AND ||
                     ir == OP_LOR ||
                     ir == OP_XOR
@@ -201,9 +237,14 @@ module Top (
                     case (ir)
                         OP_ADD: alu_op = ADD;
                         OP_SUB: alu_op = SUB;
+                        OP_INC: alu_op = INC;
+                        OP_DEC: alu_op = DEC;
+                        OP_MUL: alu_op = MUL;
+                        OP_NEG: alu_op = NEG;
                         OP_SHL: alu_op = SHL;
                         OP_SHR: alu_op = SHR;
                         OP_SRA: alu_op = SRA;
+                        OP_NOT: alu_op = NOT;
                         OP_AND: alu_op = AND;
                         OP_LOR: alu_op = LOR;
                         OP_XOR: alu_op = XOR;
@@ -218,6 +259,19 @@ module Top (
                 end
                 else if (ir == OP_RET) begin
                     return_stack_re_en = 1'b1;
+                end
+                else if (ir == OP_DRP) begin
+                    re_en_b = 1'b1;
+                end
+                else if (ir == OP_OVR) begin
+                    stack_in <= stack_out_a;
+                    wr_en = 1'b1;
+                end
+                else if (ir == OP_SWP) begin
+                    re_en_a = 1'b1;
+                    re_en_b = 1'b1;
+                    wr_en = 1'b1;
+                    stack_in = stack_out_b;
                 end
             end
             
@@ -244,11 +298,19 @@ module Top (
                 re_en_b = 1'b1;
             end
 
+            EX_JMP_0: mem_addr = pc;
+            // EX_JMP_1: begin end
+
             EX_JPZ_0: mem_addr = pc;
             // EX_JPZ_1: begin end
 
             EX_JPN_0: mem_addr = pc;
             // EX_JPN_1: begin end
+
+            EX_SWP: begin
+                wr_en = 1'b1;
+                stack_in = temp_reg;
+            end
 
             EX_FIN: data_out = stack_out_b;
 
@@ -277,18 +339,28 @@ module Top (
                 DECODE: begin
                     case (ir)
                         OP_ADD: pc <= pc + 8'd1; 
-                        OP_SUB: pc <= pc + 8'd1; 
+                        OP_SUB: pc <= pc + 8'd1;
+                        OP_INC: pc <= pc + 8'd1;
+                        OP_DEC: pc <= pc + 8'd1;
+                        OP_MUL: pc <= pc + 8'd1;
+                        OP_NEG: pc <= pc + 8'd1;
                         OP_SHL: pc <= pc + 8'd1; 
                         OP_SHR: pc <= pc + 8'd1; 
                         OP_SRA: pc <= pc + 8'd1; 
+                        OP_NOT: pc <= pc + 8'd1;
                         OP_AND: pc <= pc + 8'd1; 
                         OP_LOR: pc <= pc + 8'd1; 
                         OP_XOR: pc <= pc + 8'd1; 
-                        OP_DUP: pc <= pc + 8'd1; 
+                        OP_DUP: pc <= pc + 8'd1;
+                        OP_DRP: pc <= pc + 8'd1;
+                        OP_OVR: pc <= pc + 8'd1;
                         OP_NUL: pc <= pc + 8'd1;
                         OP_PSI: pc <= pc + 8'd1;
                         OP_PSH: pc <= pc + 8'd1;
                         OP_STR: pc <= pc + 8'd1;
+                        OP_JMP: begin
+                            pc <= pc + 8'd1;
+                        end
                         OP_JPZ: begin
                             if (stack_out_b == 8'd0) pc <= pc + 8'd1;
                             else pc <= pc + 8'd2;  // Skip imm
@@ -296,6 +368,10 @@ module Top (
                         OP_JPN: begin
                             if (stack_out_b[7] == 1'b1) pc <= pc + 8'd1;
                             else pc <= pc + 8'd2;  // Skip imm
+                        end
+                        OP_SWP: begin
+                            temp_reg <= stack_out_a;
+                            pc <= pc + 8'd1;
                         end
                         OP_FIN: pc <= pc + 8'd1;
                         OP_CAL: pc <= pc + 8'd1;
@@ -313,6 +389,9 @@ module Top (
 
                 EX_STR_0: ir <= data_in;
                 EX_STR_1: pc <= pc + 8'd1;
+
+                EX_JMP_0: ir <= data_in;
+                EX_JMP_1: pc <= ir;
 
                 EX_JPZ_0: ir <= data_in;
                 EX_JPZ_1: pc <= ir;
